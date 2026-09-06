@@ -1,104 +1,22 @@
 # Uzbek NER
 
 ## Запуск
+1. Распаковать содержимое [архива](https://drive.google.com/file/d/184-VNMERVc76aVK-5KvrCE0MZGX3F6HZ/view?usp=sharing) в `artifacts/case-solution/model`, чтобы получилось:
+```
+artifacts/case-solution/model/config.json
+artifacts/case-solution/model/gliner_config.json
+artifacts/case-solution/model/pytorch_model.bin
+artifacts/case-solution/model/tokenizer.json
+artifacts/case-solution/model/tokenizer_config.json
+artifacts/case-solution/model/train_config.json
+```
+2. Собрать контейнер и запустить его:
 ```
 docker build -t ner-uz-solution .
 docker run --rm --gpus all -p 8000:8000 ner-uz-solution
 ```
+3. Позвонить на `localhost:8000` согласно контракту
 
-## Задача
-
-Нужно найти в тексте именованные сущности, определить их точные границы и
-отнести каждую сущность к одному из трёх классов:
-
-- `ORG` — организации и бренды;
-- `NAME` — люди;
-- `GEO` — географические объекты.
-
-Подробные правила классов и определения точных границ приведены в
-[`LABELING_GUIDE.md`](LABELING_GUIDE.md).
-
-## Состав комплекта
-
-- `data/train.jsonl` — обучающая выборка с разметкой;
-- `data/dev.jsonl` — валидационная выборка с разметкой;
-- `data/dataset_manifest.json` — схема, статистика и SHA-256 файлов;
-- `LABELING_GUIDE.md` — описание классов, границ и пограничных случаев;
-- `baseline/` — минимальный baseline обучения и инференса;
-- `scripts/evaluate.py` — оценка файла предсказаний;
-- `scripts/check_service.py` — проверка совместимости HTTP-сервиса;
-- `scripts/evaluate_service.py` — прогон HTTP-сервиса и расчёт метрик;
-- `API.md` — обязательный контракт HTTP API и Docker-контейнера;
-- `requirements.txt` — зависимости baseline.
-
-## Формат данных
-
-Каждая строка `data/train.jsonl` и `data/dev.jsonl` — отдельный JSON-объект:
-
-```json
-{"hash":"example-001","text":"Ali Toshkent shahrida ishlaydi.","entities":[{"label":"NAME","start":0,"end":3},{"label":"GEO","start":4,"end":12}]}
-```
-
-Поля записи:
-
-- `hash` — уникальный идентификатор текста;
-- `text` — текст, относительно которого заданы координаты;
-- `entities` — список сущностей. Если сущностей нет, список пустой.
-
-Поля сущности:
-
-- `label` — один из классов `ORG`, `NAME`, `GEO`;
-- `start` — индекс первого символа сущности, начиная с нуля;
-- `end` — индекс первого символа после сущности.
-
-`end` не входит в интервал. Для каждой сущности выполняется:
-
-```python
-mention = text[start:end]
-```
-
-Координаты считаются по символам Unicode, как индексы строки Python, а не по
-байтам.
-
-## Baseline
-
-Baseline — минимальная стартовая точка для модельного эксперимента, а не
-полностью готовое итоговое решение. Его можно изменять или заменять. Для
-выполнения всех требований кейса команда должна дополнительно обеспечить
-воспроизводимость своего эксперимента и реализовать сервис по контракту из
-[`API.md`](API.md).
-
-Команды выполняются из корня каталога с данными. Требуется Python 3.10 или новее.
-
-Установить зависимости:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-Референсное окружение baseline использует PyTorch 2.6.0 для CUDA 12.4.
-Команда может заменить эту сборку на совместимую со своим окружением и решением.
-
-Обучить модель:
-
-```bash
-python -m baseline.train \
-  --train data/train.jsonl \
-  --dev data/dev.jsonl \
-  --output-dir artifacts/baseline
-```
-
-Получить предсказания на `dev`:
-
-```bash
-python -m baseline.predict \
-  --model-dir artifacts/baseline/model \
-  --input data/dev.jsonl \
-  --output artifacts/baseline/dev_predictions.jsonl
-```
-
-Скрипт автоматически использует CUDA, если она доступна, иначе — CPU. Полный
-список параметров доступен через `--help`.
 
 ## Воспроизводимость решения
 
@@ -130,23 +48,6 @@ python -m baseline.predict \
 
 Файл должен содержать ровно одну запись для каждого `hash` оцениваемой выборки.
 Порядок записей и сущностей значения не имеет.
-
-## Метрики
-
-Запустить оценку на `dev`:
-
-```bash
-python scripts/evaluate.py \
-  --gold data/dev.jsonl \
-  --predictions artifacts/baseline/dev_predictions.jsonl \
-  --output artifacts/baseline/dev_metrics.json
-```
-
-Сущность засчитывается только при точном совпадении `hash`, `label`, `start` и
-`end` с эталоном. Скрипт выводит Precision, Recall и F1 для каждого класса, а
-также micro- и macro-усреднение.
-
-Итоговая оценка решений проводится на закрытой тестовой выборке.
 
 ## Инференс-сервис
 
