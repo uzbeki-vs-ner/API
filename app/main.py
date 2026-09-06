@@ -8,6 +8,7 @@ from typing import List
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator
 
 from app.model_service import NERModelService
@@ -74,15 +75,29 @@ async def lifespan(app: FastAPI):
     global model_service
     
     logger.info("Starting NER service")
+    logger.info(f"Model path: {MODEL_PATH}")
     
-    # Start model loading in background
-    try:
-        model_service = NERModelService(MODEL_PATH)
-        model_service.load()
-        logger.info("Model loaded successfully")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
+    # Check if model directory exists
+    if not os.path.exists(MODEL_PATH):
+        logger.error(f"Model directory does not exist: {MODEL_PATH}")
         model_service = None
+    else:
+        # Check if model directory contains required files
+        required_files = ['config.json', 'tokenizer_config.json']
+        missing_files = [f for f in required_files if not os.path.exists(os.path.join(MODEL_PATH, f))]
+        
+        if missing_files:
+            logger.error(f"Model directory missing required files: {missing_files}")
+            model_service = None
+        else:
+            # Start model loading
+            try:
+                model_service = NERModelService(MODEL_PATH)
+                model_service.load()
+                logger.info("Model loaded successfully")
+            except Exception as e:
+                logger.error(f"Failed to load model: {e}")
+                model_service = None
     
     yield
     
@@ -95,6 +110,17 @@ app = FastAPI(
     description="Named Entity Recognition service for Uzbek texts",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Add CORS middleware - ALLOW ALL ORIGINS for development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 
@@ -165,3 +191,14 @@ async def predict(request: List[PredictRequestItem]):
             status_code=500,
             detail="Internal server error during prediction"
         )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        workers=1,
+        log_level="info"
+    )

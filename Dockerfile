@@ -1,5 +1,4 @@
-# Use Python 3.9 slim as base image
-FROM python:3.9-slim
+FROM pytorch/pytorch:2.14.0-cuda13.2-cudnn9-runtime
 
 # Set working directory
 WORKDIR /app
@@ -8,17 +7,23 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
+#     && apt install python3.12-venv
+    
+# Create and activate virtual environment
+# ENV VIRTUAL_ENV=/opt/venv
+# RUN python3 -m venv $VIRTUAL_ENV
+# ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --break-system-packages
 
 # Copy application code
 COPY app/ ./app/
 COPY baseline/ ./baseline/
 
 # Copy model files
-COPY artifacts/baseline/model/ ./artifacts/baseline/model/
+COPY artifacts/ ./artifacts/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
