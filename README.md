@@ -1,5 +1,11 @@
 # Uzbek NER
 
+## Запуск
+```
+docker build -t ner-uz-solution .
+docker run --rm --gpus all -p 8000:8000 ner-uz-solution
+```
+
 ## Задача
 
 Нужно найти в тексте именованные сущности, определить их точные границы и
