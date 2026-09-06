@@ -8,7 +8,6 @@ from typing import List
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator
 
 from app.model_service import NERModelService
@@ -103,16 +102,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 @app.get("/healthz", response_model=HealthResponse)
 async def health_check():
