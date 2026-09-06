@@ -1,5 +1,5 @@
 """
-FastAPI application for NER service using the baseline model.
+FastAPI application for NER service using GLiNER model.
 """
 
 import os
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 model_service = None
 
 # Model path from environment variable or default
-MODEL_PATH = os.getenv("MODEL_PATH", "/app/artifacts/baseline/model")
+MODEL_PATH = os.getenv("MODEL_PATH", "artifacts/case-solution/model")
 
 
 # Pydantic models for request/response validation
@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
     """Load model on startup."""
     global model_service
     
-    logger.info("Starting NER service")
+    logger.info("Starting NER service with GLiNER model")
     logger.info(f"Model path: {MODEL_PATH}")
     
     # Check if model directory exists
@@ -82,22 +82,14 @@ async def lifespan(app: FastAPI):
         logger.error(f"Model directory does not exist: {MODEL_PATH}")
         model_service = None
     else:
-        # Check if model directory contains required files
-        required_files = ['config.json', 'tokenizer_config.json']
-        missing_files = [f for f in required_files if not os.path.exists(os.path.join(MODEL_PATH, f))]
-        
-        if missing_files:
-            logger.error(f"Model directory missing required files: {missing_files}")
+        # Load model
+        try:
+            model_service = NERModelService(MODEL_PATH)
+            model_service.load()
+            logger.info("Model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}", exc_info=True)
             model_service = None
-        else:
-            # Start model loading
-            try:
-                model_service = NERModelService(MODEL_PATH)
-                model_service.load()
-                logger.info("Model loaded successfully")
-            except Exception as e:
-                logger.error(f"Failed to load model: {e}")
-                model_service = None
     
     yield
     
@@ -106,30 +98,25 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="NER Service for Uzbek",
-    description="Named Entity Recognition service for Uzbek texts",
+    title="NER Service with GLiNER",
+    description="Named Entity Recognition service using GLiNER model",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# Add CORS middleware - ALLOW ALL ORIGINS for development
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when allow_origins=["*"]
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
-    expose_headers=["*"],  # Expose all headers
-    max_age=600,  # Cache preflight requests for 10 minutes
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
 @app.get("/healthz", response_model=HealthResponse)
 async def health_check():
-    """
-    Health check endpoint.
-    Returns 200 if model is loaded, 503 otherwise.
-    """
+    """Health check endpoint."""
     global model_service
     
     if model_service is None or not model_service.is_loaded:
@@ -143,9 +130,7 @@ async def health_check():
 
 @app.post("/api/v1/predict", response_model=PredictResponse)
 async def predict(request: List[PredictRequestItem]):
-    """
-    Predict entities in a batch of texts.
-    """
+    """Predict entities in a batch of texts."""
     global model_service
     
     # Check if model is loaded
@@ -186,7 +171,7 @@ async def predict(request: List[PredictRequestItem]):
         return PredictResponse(data=results)
         
     except Exception as e:
-        logger.error(f"Prediction failed: {e}")
+        logger.error(f"Prediction failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Internal server error during prediction"

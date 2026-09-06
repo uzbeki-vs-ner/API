@@ -28,7 +28,9 @@ COPY artifacts/ ./artifacts/
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    MODEL_PATH=/app/artifacts/baseline/model
+    MODEL_PATH=artifacts/case-solution/model \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Expose port
 EXPOSE 8000

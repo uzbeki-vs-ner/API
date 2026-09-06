@@ -7,3 +7,4 @@ tokenizers>=0.22.2
 tqdm>=4.70.0
 uvicorn
 fastapi
+gliner>=0.2.0
