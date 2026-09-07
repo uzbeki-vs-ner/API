@@ -1,4 +1,4 @@
-# Uzbek NER
+# Uzbek NER: API
 
 ## Запуск
 1. Распаковать содержимое [архива](https://drive.google.com/file/d/1jSJrC2kycv5u8zpjhqdLApTcIXZzqhKE/view?usp=sharing) в `artifacts/case-solution/model`, чтобы получилось:
