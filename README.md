@@ -1,16 +1,15 @@
 # Uzbek NER
 
 ## Запуск
-1. Распаковать содержимое [архива](https://drive.google.com/file/d/184-VNMERVc76aVK-5KvrCE0MZGX3F6HZ/view?usp=sharing) в `artifacts/case-solution/model`, чтобы получилось:
+1. Распаковать содержимое [архива](https://drive.google.com/file/d/1jSJrC2kycv5u8zpjhqdLApTcIXZzqhKE/view?usp=sharing) в `artifacts/case-solution/model`, чтобы получилось:
 ```
-artifacts/case-solution/model/config.json
 artifacts/case-solution/model/gliner_config.json
 artifacts/case-solution/model/pytorch_model.bin
 artifacts/case-solution/model/tokenizer.json
 artifacts/case-solution/model/tokenizer_config.json
 artifacts/case-solution/model/train_config.json
 ```
-2. Собрать контейнер и запустить его:
+2. Собрать контейнер и запустить его (`--gpus all` опционально, если есть GPU):
 ```
 docker build -t ner-uz-solution .
 docker run --rm --gpus all -p 8000:8000 ner-uz-solution
